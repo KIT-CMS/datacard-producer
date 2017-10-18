@@ -106,20 +106,19 @@ class DatacardBuilder(object):
         # TODO
         pass
 
-    def extract_shapes(self, channel, analysis, era, variable, mass):
-        template = self._get_template(channel, analysis, era, variable, mass)
+    def extract_shapes(self, channel, analysis, era, variable):
+        template = self._get_template(channel, analysis, era, variable)
         self.cb.cp().ExtractShapes(self.input_filename,
                                    template.replace("$SYSTEMATIC", ""),
                                    template)
 
-    def _get_template(self, channel, analysis, era, variable, mass):
+    def _get_template(self, channel, analysis, era, variable):
         # TODO: Find suitable CombineHarvester templates here
-        return "#{CHANNEL}#$BIN#$PROCESS#{ANALYSIS}#{ERA}#{VARIABLE}#{MASS}#$SYSTEMATIC".format(
+        return "#{CHANNEL}#$BIN#$PROCESS#{ANALYSIS}#{ERA}#{VARIABLE}#$MASS#$SYSTEMATIC".format(
             CHANNEL=channel,
             ANALYSIS=analysis,
             ERA=era,
-            VARIABLE=variable,
-            MASS=mass)
+            VARIABLE=variable)
 
     def print_datacard(self):
         self.cb.PrintAll()
