@@ -108,32 +108,40 @@ class DatacardBuilder(object):
 
     def extract_shapes(self, channel, analysis, era, variable):
         template = self._get_template(channel, analysis, era, variable)
-        self.cb.cp().ExtractShapes(self.input_filename,
-                                   template.replace("$SYSTEMATIC", ""),
-                                   template)
+        self.cb.ExtractShapes(self.input_filename,
+                              template.replace("$SYSTEMATIC", ""), template)
 
     def _get_template(self, channel, analysis, era, variable):
         # TODO: Find suitable CombineHarvester templates here
         return "#{CHANNEL}#$BIN#$PROCESS#{ANALYSIS}#{ERA}#{VARIABLE}#$MASS#$SYSTEMATIC".format(
-            CHANNEL=channel,
-            ANALYSIS=analysis,
-            ERA=era,
-            VARIABLE=variable)
+            CHANNEL=channel, ANALYSIS=analysis, ERA=era, VARIABLE=variable)
 
     def print_datacard(self):
         self.cb.PrintAll()
 
     def write(self, output_prefix):
-        logger.info("Create datacard files %s.txt and %s.root.", output_prefix,
-                    output_prefix)
-        writer = ch.CardWriter("{}.txt".format(output_prefix),
-                               "{}.root".format(output_prefix))
+        output_datacard = "{}.txt".format(output_prefix)
+        output_shapes = "{}.root".format(output_prefix)
+        logger.info("Create datacard files %s and %s.", output_datacard,
+                    output_shapes)
+        writer = ch.CardWriter(output_datacard, output_shapes)
         if logger.isEnabledFor(logging.DEBUG):
             writer.SetVerbosity(1)
         writer.CreateDirectories(
             False)  # TODO: FIXME: Does not work without this?
         # writer.SetWildcardMasses([]) # TODO: What is this doing?
         writer.WriteCards("", self.cb)
+
+    def summary(self):
+        logger.info("Analyses: %s", self.cb.analysis_set())
+        logger.info("Eras: %s", self.cb.era_set())
+        logger.info("Masses: %s", self.cb.mass_set())
+        logger.info("Channels: %s", self.cb.channel_set())
+        logger.info("Processes: %s", self.cb.process_set())
+        logger.info("Signals: %s", self.cb.cp().signals().process_set())
+        logger.info("Backgrounds: %s",
+                    self.cb.cp().backgrounds().process_set())
+        logger.info("Categories: %s", self.cb.bin_set())
 
     @property
     def shapes(self):
