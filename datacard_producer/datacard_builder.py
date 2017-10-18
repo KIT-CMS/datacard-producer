@@ -121,6 +121,16 @@ class DatacardBuilder(object):
     def print_datacard(self):
         self.cb.PrintAll()
 
+    def auto_rebin(self, threshold, mode):
+        rebin = ch.AutoRebin()
+        rebin.SetBinThreshold(threshold)
+        rebin.SetRebinMode(mode)
+        rebin.SetPerformRebin(True)
+        rebin.SetVerbosity(0)
+        if logger.isEnabledFor(logging.DEBUG):
+            rebin.SetVerbosity(1)
+        rebin.Rebin(self.cb, self.cb)
+
     def replace_observation_by_asimov_dataset(self):
         if not self._shapes_extracted:
             logger.fatal("Shapes need to be extracted first.")
