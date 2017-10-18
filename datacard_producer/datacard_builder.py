@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# NOTE: Do not import any modules from HenryPlotter and move this code in a new module
-
 import ROOT
 import CombineHarvester.CombineTools.ch as ch
 
@@ -12,69 +10,116 @@ import os
 
 
 class DatacardBuilder(object):
-    def __init__(self, input_filename, **selection):
+    def __init__(self, input_filename):
         if not os.path.exists(input_filename):
             logger.fatal("File %s does not exist.", input_filename)
             raise Exception
         self._input_filename = input_filename
 
-        self._shapes = self._get_shapes(selection)
+        self._shapes = self._get_shapes()
         logger.info("Found %d shapes in input file %s.",
                     len(self._shapes), self._input_filename)
         self._cb = ch.CombineHarvester()
 
-    def _get_shapes(self, selection):
+    def make_pairs(self, x):
+        return [(i, c) for i, c in enumerate(x)]
+
+    def _convert_to_list(self, x):
+        if not isinstance(x, list):
+            return [x]
+        else:
+            return x
+
+    def _get_shapes(self):
         f = ROOT.TFile(self._input_filename)
         shapes = []
         for key in f.GetListOfKeys():
             shape = Shape(key.GetName())
-            valid = True
-            for key, value in selection.iteritems():
-                if not isinstance(value, list):
-                    value = [value]
-                if not shape.get_property(key) in value:
-                    valid = False
-            if valid:
-                logger.debug("Add shape %s.", shape)
-                shapes.append(shape)
+            shapes.append(shape)
         if len(shapes) == 0:
             logger.fatal("No shapes found.")
             raise Exception
         return shapes
 
-    def select(self, name, **selection):
-        results = []
+    def add_observation(self, mass, analysis, era, channel, category):
+        mass = self._convert_to_list(mass)
+        analysis = self._convert_to_list(analysis)
+        era = self._convert_to_list(era)
+        channel = self._convert_to_list(channel)
+        category = self._convert_to_list(category)
+        logger.info(
+            "Add observations with mass %s, analysis %s, era %s, channel %s and category %s.",
+            mass, analysis, era, channel, category)
+        self.cb.AddObservations(mass, analysis, era, channel, category)
+
+    def add_signals(self, mass, analysis, era, channel, process, category):
+        self.add_processes(mass, analysis, era, channel, process, category,
+                           True)
+
+    def add_backgrounds(self, mass, analysis, era, channel, process, category):
+        self.add_processes(mass, analysis, era, channel, process, category,
+                           False)
+
+    def add_processes(self, mass, analysis, era, channel, process, category,
+                      flag):
+        mass = self._convert_to_list(mass)
+        analysis = self._convert_to_list(analysis)
+        era = self._convert_to_list(era)
+        channel = self._convert_to_list(channel)
+        category = self._convert_to_list(category)
+        logger.info(
+            "Add %s with mass %s, analysis %s, era %s, channel %s, process %s and category %s.",
+            "signals" if flag else "backgrounds", mass, analysis, era, channel,
+            process, category)
+        self.cb.AddProcesses(mass, analysis, era, channel, process, category,
+                             flag)
+
+    def add_shape_systematic(self, name, strength, process):
+        # TODO: Add selector with kwargs
+        found_up = False
+        found_down = False
         for s in self.shapes:
-            valid = True
-            for key, value in selection.iteritems():
-                if not isinstance(value, list):
-                    value = [value]
-                if not s.get_property(key) in value:
-                    valid = False
-            if valid:
-                results.append(s.get_property(name))
-        return list(set(results))
+            if name in s.variation:
+                if "Up" in s.variation:
+                    found_up = True
+                elif "Down" in s.variation:
+                    found_down = True
+        if not found_up:
+            logger.fatal("Have not found up-shifted shape for systematic %s.",
+                         name)
+            raise Exception
+        if not found_down:
+            logger.fatal(
+                "Have not found down-shifted shape for systematic %s.", name)
+            raise Exception
+        process = self._convert_to_list(process)
+        self.cb.cp().process(process).AddSyst(self.cb, name, "shape",
+                                              ch.SystMap()(strength))
 
-    def add_observation(self):
+    def add_normalization_systematic(self, name, process, strength):
+        # TODO: Add selector with kwargs
+        process = self._convert_to_list(process)
+        self.cb.cp().process(process).AddSyst(self.cb, name, "lnN",
+                                              ch.SystMap()(strength))
+
+    def add_bin_by_bin_systematics(self):
+        # TODO
         pass
 
-    def add_signals(self):
-        pass
+    def extract_shapes(self, channel, analysis, era, variable, mass):
+        template = self._get_template(channel, analysis, era, variable, mass)
+        self.cb.cp().ExtractShapes(self.input_filename,
+                                   template.replace("$SYSTEMATIC", ""),
+                                   template)
 
-    def add_backgrounds(self):
-        pass
-
-    def add_shape_systematic(self):
-        pass
-
-    def add_normalization_systematic(self):
-        pass
-
-    def add_bin_by_bin(self):
-        pass
-
-    def summary(self):
-        pass
+    def _get_template(self, channel, analysis, era, variable, mass):
+        # TODO: Find suitable CombineHarvester templates here
+        return "#{CHANNEL}#$BIN#$PROCESS#{ANALYSIS}#{ERA}#{VARIABLE}#{MASS}#$SYSTEMATIC".format(
+            CHANNEL=channel,
+            ANALYSIS=analysis,
+            ERA=era,
+            VARIABLE=variable,
+            MASS=mass)
 
     def print_datacard(self):
         self.cb.PrintAll()
@@ -115,6 +160,10 @@ class Shape(object):
             ])
         }
         self._properties = [p for p in name.split('#') if p != ""]
+        if self._name[-1] == "#":
+            self._properties.append("Nominal")
+
+        # TODO: Add validity checks that name is structured as expected
 
     def __str__(self):
         return "Shape(channel={CHANNEL}, category={CATEGORY}, process={PROCESS}, analysis={ANALYSIS}, era={ERA}, variable={VARIABLE}, mass={MASS}, variation={VARIATION})".format(
