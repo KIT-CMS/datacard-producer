@@ -20,6 +20,7 @@ class DatacardBuilder(object):
         logger.info("Found %d shapes in input file %s.",
                     len(self._shapes), self._input_filename)
         self._cb = ch.CombineHarvester()
+        self._shapes_extracted = False
 
     def make_pairs(self, x):
         return [(i, c) for i, c in enumerate(x)]
@@ -110,6 +111,7 @@ class DatacardBuilder(object):
         template = self._get_template(channel, analysis, era, variable)
         self.cb.ExtractShapes(self.input_filename,
                               template.replace("$SYSTEMATIC", ""), template)
+        self._shapes_extracted = True
 
     def _get_template(self, channel, analysis, era, variable):
         # TODO: Find suitable CombineHarvester templates here
@@ -118,6 +120,23 @@ class DatacardBuilder(object):
 
     def print_datacard(self):
         self.cb.PrintAll()
+
+    def replace_observation_by_asimov_dataset(self):
+        if not self._shapes_extracted:
+            logger.fatal("Shapes need to be extracted first.")
+            raise Exception
+
+        def _replace_observation_by_asimov_dataset(observation):
+            cb = self.cb.cp().analysis([observation.analysis()]).era([
+                observation.era()
+            ]).channel([observation.channel()]).bin([observation.bin()])
+            background = cb.cp().backgrounds()
+            signal = cb.cp().signals()
+            observation.set_shape(background.GetShape() + signal.GetShape(),
+                                  True)
+            observation.set_rate(background.GetRate() + signal.GetRate())
+
+        self.cb.cp().ForEachObs(_replace_observation_by_asimov_dataset)
 
     def write(self, output_prefix):
         output_datacard = "{}.txt".format(output_prefix)
