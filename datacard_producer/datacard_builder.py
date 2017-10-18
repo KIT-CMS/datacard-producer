@@ -103,10 +103,6 @@ class DatacardBuilder(object):
         self.cb.cp().process(process).AddSyst(self.cb, name, "lnN",
                                               ch.SystMap()(strength))
 
-    def add_bin_by_bin_systematics(self):
-        # TODO
-        pass
-
     def extract_shapes(self, channel, analysis, era, variable):
         template = self._get_template(channel, analysis, era, variable)
         self.cb.ExtractShapes(self.input_filename,
@@ -130,6 +126,19 @@ class DatacardBuilder(object):
         if logger.isEnabledFor(logging.DEBUG):
             rebin.SetVerbosity(1)
         rebin.Rebin(self.cb, self.cb)
+
+    def add_bin_by_bin_systematics(self, processes, add_threshold,
+                                   merge_threshold, fix_norm):
+        bbb = ch.BinByBinFactory()
+        if logger.isEnabledFor(logging.DEBUG):
+            bbb.SetVerbosity(1)
+        bbb.SetAddThreshold(add_threshold)
+        bbb.SetMergeThreshold(merge_threshold)
+        bbb.SetFixNorm(fix_norm)
+        bbb.MergeBinErrors(self.cb.cp().process(processes))
+        bbb.AddBinByBin(self.cb.cp().process(processes), self.cb)
+        self.cb.SetGroup("bbb", [".*_bin_\\d+"])
+        self.cb.SetGroup("syst_plus_bbb", [".*"])
 
     def replace_observation_by_asimov_dataset(self):
         if not self._shapes_extracted:
