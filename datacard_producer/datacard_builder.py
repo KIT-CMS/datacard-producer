@@ -129,6 +129,9 @@ class DatacardBuilder(object):
 
     def add_bin_by_bin_systematics(self, processes, add_threshold,
                                    merge_threshold, fix_norm):
+        if not self._shapes_extracted:
+            logger.fatal("Shapes need to be extracted first.")
+            raise Exception
         bbb = ch.BinByBinFactory()
         if logger.isEnabledFor(logging.DEBUG):
             bbb.SetVerbosity(1)
