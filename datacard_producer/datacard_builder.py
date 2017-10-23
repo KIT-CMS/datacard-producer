@@ -160,9 +160,7 @@ class DatacardBuilder(object):
 
         self.cb.cp().ForEachObs(_replace_observation_by_asimov_dataset)
 
-    def write(self, output_prefix):
-        output_datacard = "{}.txt".format(output_prefix)
-        output_shapes = "{}.root".format(output_prefix)
+    def write(self, output_datacard, output_shapes):
         logger.info("Create datacard files %s and %s.", output_datacard,
                     output_shapes)
         writer = ch.CardWriter(output_datacard, output_shapes)
