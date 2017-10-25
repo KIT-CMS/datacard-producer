@@ -75,11 +75,17 @@ class DatacardBuilder(object):
         self.cb.AddProcesses(mass, analysis, era, channel, process, category,
                              flag)
 
-    def add_shape_systematic(self, name, strength, process):
-        # TODO: Add selector with kwargs
+    def add_shape_systematic(self, name, strength, channel, process):
+        channel = self._convert_to_list(channel)
+        process = self._convert_to_list(process)
+
         found_up = False
         found_down = False
         for s in self.shapes:
+            if not s.process in process:
+                continue
+            if not s.channel in channel:
+                continue
             if name in s.variation:
                 if "Up" in s.variation:
                     found_up = True
@@ -93,15 +99,16 @@ class DatacardBuilder(object):
             logger.fatal(
                 "Have not found down-shifted shape for systematic %s.", name)
             raise Exception
-        process = self._convert_to_list(process)
-        self.cb.cp().process(process).AddSyst(self.cb, name, "shape",
-                                              ch.SystMap()(strength))
 
-    def add_normalization_systematic(self, name, process, strength):
-        # TODO: Add selector with kwargs
+        self.cb.cp().channel(channel).process(process).AddSyst(
+            self.cb, name, "shape", ch.SystMap()(strength))
+
+    def add_normalization_systematic(self, name, strength, channel, process):
+        channel = self._convert_to_list(channel)
         process = self._convert_to_list(process)
-        self.cb.cp().process(process).AddSyst(self.cb, name, "lnN",
-                                              ch.SystMap()(strength))
+
+        self.cb.cp().channel(channel).process(process).AddSyst(
+            self.cb, name, "lnN", ch.SystMap()(strength))
 
     def extract_shapes(self, channel, analysis, era, variable):
         template = self._get_template(channel, analysis, era, variable)
@@ -110,7 +117,7 @@ class DatacardBuilder(object):
         self._shapes_extracted = True
 
     def _get_template(self, channel, analysis, era, variable):
-        # TODO: Find suitable CombineHarvester templates here
+        # TODO: Find suitable CombineHarvester templates here, e.g., for era or analysis
         return "#{CHANNEL}#$BIN#$PROCESS#{ANALYSIS}#{ERA}#{VARIABLE}#$MASS#$SYSTEMATIC".format(
             CHANNEL=channel, ANALYSIS=analysis, ERA=era, VARIABLE=variable)
 
