@@ -112,8 +112,11 @@ class DatacardBuilder(object):
 
     def extract_shapes(self, channel, analysis, era, variable):
         template = self._get_template(channel, analysis, era, variable)
-        self.cb.ExtractShapes(self.input_filename,
-                              template.replace("$SYSTEMATIC", ""), template)
+        channel = self._convert_to_list(channel)
+        self.cb.cp().channel(channel).ExtractShapes(self.input_filename,
+                                                    template.replace(
+                                                        "$SYSTEMATIC", ""),
+                                                    template)
         self._shapes_extracted = True
 
     def _get_template(self, channel, analysis, era, variable):
