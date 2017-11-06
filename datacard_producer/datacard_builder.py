@@ -153,7 +153,7 @@ class DatacardBuilder(object):
         self.cb.SetGroup("bbb", [".*_bin_\\d+"])
         self.cb.SetGroup("syst_plus_bbb", [".*"])
 
-    def replace_observation_by_asimov_dataset(self):
+    def replace_observation_by_asimov_dataset(self, category):
         if not self._shapes_extracted:
             logger.fatal("Shapes need to be extracted first.")
             raise Exception
@@ -168,7 +168,8 @@ class DatacardBuilder(object):
                                   True)
             observation.set_rate(background.GetRate() + signal.GetRate())
 
-        self.cb.cp().ForEachObs(_replace_observation_by_asimov_dataset)
+        category = self._convert_to_list(category)
+        self.cb.cp().bin(category).ForEachObs(_replace_observation_by_asimov_dataset)
 
     def write(self, output_datacard, output_shapes):
         logger.info("Create datacard files %s and %s.", output_datacard,
