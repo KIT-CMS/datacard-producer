@@ -79,27 +79,6 @@ class DatacardBuilder(object):
         channel = self._convert_to_list(channel)
         process = self._convert_to_list(process)
 
-        found_up = False
-        found_down = False
-        for s in self.shapes:
-            if not s.process in process:
-                continue
-            if not s.channel in channel:
-                continue
-            if name in s.variation:
-                if "Up" in s.variation:
-                    found_up = True
-                elif "Down" in s.variation:
-                    found_down = True
-        if not found_up:
-            logger.fatal("Have not found up-shifted shape for systematic %s.",
-                         name)
-            raise Exception
-        if not found_down:
-            logger.fatal(
-                "Have not found down-shifted shape for systematic %s.", name)
-            raise Exception
-
         self.cb.cp().channel(channel).process(process).AddSyst(
             self.cb, name, "shape", ch.SystMap()(strength))
 
