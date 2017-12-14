@@ -89,13 +89,17 @@ class DatacardBuilder(object):
         self.cb.cp().channel(channel).process(process).AddSyst(
             self.cb, name, "lnN", ch.SystMap()(strength))
 
-    def extract_shapes(self, channel, analysis, era, variable):
+    def extract_shapes(self, channel, analysis, era, variable, bin=None):
         template = self._get_template(channel, analysis, era, variable)
         channel = self._convert_to_list(channel)
-        self.cb.cp().channel(channel).ExtractShapes(self.input_filename,
-                                                    template.replace(
-                                                        "$SYSTEMATIC", ""),
-                                                    template)
+        cb_cp = self.cb.cp().channel(channel)
+
+        if bin != None:
+            bin = self._convert_to_list(bin)
+            cb_cp = cb_cp.bin(bin)
+
+        cb_cp.ExtractShapes(self.input_filename,
+                            template.replace("$SYSTEMATIC", ""), template)
         self._shapes_extracted = True
 
     def _get_template(self, channel, analysis, era, variable):
@@ -148,7 +152,8 @@ class DatacardBuilder(object):
             observation.set_rate(background.GetRate() + signal.GetRate())
 
         category = self._convert_to_list(category)
-        self.cb.cp().bin(category).ForEachObs(_replace_observation_by_asimov_dataset)
+        self.cb.cp().bin(category).ForEachObs(
+            _replace_observation_by_asimov_dataset)
 
     def write(self, output_datacard, output_shapes):
         logger.info("Create datacard files %s and %s.", output_datacard,
